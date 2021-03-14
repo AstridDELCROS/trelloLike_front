@@ -27,3 +27,7 @@ Intégration avec [Bulma](https://bulma.io/)
 - Ajout du middleware multer en back pour gérer le format de formData
 - Modification du titre via form hidden, écouteur pour déclencher `showFormToEditTitle` dans `makeListInDOM`
 - Listener sur submit lance `handleEditListForm` qui envoie les données dans la bdd avec fetch patch
+- Ajout d'un formulaire d'édition dans le HTML de card template
+- Création de `handleCardContentEdit` pour faire apparaitre le form d'édition de carte
+- Création de `handleEditCardForm` pour modifier une carte et sauvegarder
+- Création de `handleCardDelete` pour supprimer une carte et sauvegarder

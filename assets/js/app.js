@@ -1,12 +1,5 @@
 const app = {
 
-    testAjax: async function() {
-        const response = await fetch('https://swapi.dev/api/people/1');
-        // interpréation du résultat en json
-        const content = await response.json();
-        console.log(content);
-    },
-
     base_url: 'http://localhost:4000',
 
     getListsFromAPI: async function() {
@@ -33,7 +26,6 @@ const app = {
     init: function() {
         console.log('app.init !');
         app.addListenerToActions();
-        // app.testAjax();
         app.getListsFromAPI();
     },
     
@@ -104,9 +96,28 @@ const app = {
     },
 
     handleAddCardForm: async function(event) {
-        event.preventDefault();
-        const formData = new FormData(event.target);
-        app.makeCardInDOM(formData.get('content'), formData.get('list_id'));
+        // event.preventDefault();
+        // const formData = new FormData(event.target);
+        // app.makeCardInDOM(formData.get('content'), formData.get('list_id'));
+        try {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            // Appel à l'API pour envoyer les données à sauvegarder (une liste)
+            // FormData utilise le format `multipart/form-data` non géré par Express, il faut ajouter multer en back
+            const response = await fetch(`${app.base_url}/cards`, {
+                method: 'post',
+                body: formData
+            });
+            const newCardOrError = await response.json();
+            if(response.status !== 200){
+                throw Error(newCardOrError);
+            }
+            // app.makeListInDOM(formData.get('name'));
+            app.makeCardInDOM(newCardOrError);
+        } catch (error) {
+            alert('désolé, une erreur est survenue..');
+            console.error(error);
+        }
     },
 
     makeListInDOM: function(listName, listId) {
@@ -156,10 +167,83 @@ const app = {
         const listContainer = document.querySelector('[list-id="'+card.list_id+'"] .panel-block');
         const cardBox = newCard.querySelector('.box');
         cardBox.style.backgroundColor = card.color;
+
+        cardBox.setAttribute('card-id', card.id);
+        cardBox.querySelector('input[name=id]').value = card.id;
+        cardBox.querySelector('textarea[name=content]').textContent = card.content;
+
+        const editButton = cardBox.querySelector('.card-edit');
+        editButton.addEventListener('click', app.handleCardContentEdit);
+
+        const editForm = cardBox.querySelector('form');
+        editForm.addEventListener('submit', app.handleEditCardForm);
+
+        const deleteButton = cardBox.querySelector('.card-delete');
+        deleteButton.addEventListener('click', app.handleCardDelete);
         
         listContainer.append(newCard);
     
         app.hideModals();
+    },
+
+    handleCardContentEdit: function (event) {
+        const currentCard = event.target.closest('.displayed-card');
+        currentCard.classList.add('is-hidden');
+        const form = currentCard.nextElementSibling;
+        form.classList.remove('is-hidden');
+    },
+
+    handleEditCardForm: async function (event) {
+        const form = event.target;
+        try {
+            event.preventDefault();
+            const formData = new FormData(form);
+            const response = await fetch(`${app.base_url}/cards/${formData.get('id')}`, {
+                method: 'PATCH',
+                body: formData
+            });
+            const cardOrError = await response.json();
+            if (response.status !== 200) {
+                throw cardOrError;
+            }
+            form.classList.add('is-hidden');
+            // closest pour aller chercher le parent le plus proche
+            const currentCard = form.closest('.box').querySelector('.displayed-card');
+            // querySelector pour aller chercher l'enfant le plus proche
+            currentCard.querySelector('.content').textContent = cardOrError.content;
+            currentCard.classList.remove('is-hidden');
+        } catch (error) {
+            alert("désolé, une erreur est survenue");
+            console.error(error);
+        }
+    },
+
+    handleCardDelete: async function (event) {
+        const currentCardBox = event.target.closest('.box');
+        const cardId = currentCardBox.getAttribute('card-id');
+        const cardContent = currentCardBox.querySelector('.content').textContent;
+
+        if (!confirm(`Êtes-vous sûr de vouloir supprimer la carte "${cardContent}" ?`)) {
+            return;
+        }
+
+        try {
+            // confirmé, on peut donc supprimer
+            const response = await fetch(`${app.base_url}/cards/${cardId}`, {
+                method: 'DELETE'
+            });
+            const deleteOrError = await response.json();
+
+            if (response.status !== 200) {
+                throw deleteOrError;
+            }
+
+            currentCardBox.remove();
+
+        } catch (error) {
+            alert("désolé, une erreur est survenue");
+            console.error(error);
+        }
     },
   
     showFormToEditTitle: function(event) {
